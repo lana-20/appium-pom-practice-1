@@ -71,6 +71,34 @@ Our very first use of our very first page object! This is pretty fun. Our overal
 
     pytest test_echo_box.py
 
+This will take a few moments, so while the test is running, let's go ahead and stub out our next page object, which will attempt to model the Echo Box view itself. So I'm going to create a new file called [code>echo_view.py</code>](https://github.com/lana-20/appium-pom-practice-1/blob/main/pom/views/echo_view.py) inside <code>views</code>. And it's probably going to start out looking a lot like <code>home_view.py</code> in terms of its structure, so I'll copy the content from <code>home_view</code> in, and for now I'll simply delete the <code>nav_to_echo_box</code> method, and rename the class itself to <code>EchoView</code>, so all we have are the imports and then a pretty empty class:
+
+    class EchoView(object):
+
+        def __init__(self, driver):
+            self.driver = driver
+
+Let's go back and check that our test passed, and yes it did. Excellent. So we can keep on working knowing that the addition of the Home page object didn't mess anything up. Alright back to our Echo View. The first thing we want to ask is, what are the high-level user actions that take place on this view? Well, the most obvious commandment is to save a message. That's the whole point of a view, to enable the user to enter some text which is displayed back to them later on. So let's stub out our first action method:
+
+        def save_message(self, message):
+            pass
+
+Notice that we are including a <code>message</code> parameter. We could just hard-code a particular message into this method, but then it wouldn't be generally very useful. A user can type anything they want into this box, and our model should reflect that. It's the test that will be in charge of determining what particular message gets typed, because it's the test that knows what case it is trying to cover. This page object is merely trying to model the potential actions on the page, not say which actions will actually be taken at any given point in time. OK, to implement this method, let's just move the two lines over from the testcase that have to do with typing into the message field and clicking the save button:
+
+        def save_message(self, message):
+            wait.until(EC.presence_of_element_located(
+                (MobileBy.ACCESSIBILITY_ID, 'messageInput'))).send_keys('Hello')
+            driver.find_element(MobileBy.ACCESSIBILITY_ID, 'messageSaveBtn').click()
+
+Now there are a couple things we need to fix. We don't have a wait defined, so our <code>wait</code> variable is a problem. For now, let's copy a wait definition from our other page object, the home view that works. But it is troubling that we are defining waits in multiple places. So let's keep an eye on that to fix it later. And we are also using the <code>driver</code> name here, when that is not a name we have available. Instead, we need to call it <code>self.driver</code>. Finally, we're still sending the string 'Hello' to the <code>send_keys</code> method, rather than using our <code>message</code> parameter, so let's update that as well. OK, those are some good fixes. What's next? Well, we need to pull our element locators up to the top of the class:
+
+        def save_message(self, message):
+            wait = WebDriverWait(self.driver, 10)
+            wait.until(EC.presence_of_element_located(self.MESSAGE_INPUT)).send_keys('Hello')
+            self.driver.find_element(*self.SAVE_BUTTON).click()
+
+
+
 
 
 
