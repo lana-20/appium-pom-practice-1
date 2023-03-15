@@ -97,7 +97,62 @@ Now there are a couple things we need to fix. We don't have a wait defined, so o
             wait.until(EC.presence_of_element_located(self.MESSAGE_INPUT)).send_keys('Hello')
             self.driver.find_element(*self.SAVE_BUTTON).click()
 
+This is looking pretty clean. But what's this star that I used in the call to <code>driver.find_element</code>? Well, the reason there's a difference between the expected condition call, where we just use the message input variable directly, and the find element call, where we put the star in front of the save button variable, is that they take different parameters. The expected condition takes a tuple object, which is exactly what we have. But the find element call takes instead a series of two arguments. We have defined <code>SAVE_BUTTON</code> as a tuple, though, and in Python there's a way to spread items in a tuple across a method call, so that each item in the tuple becomes one of the positional arguments in the method call. And again the reason we're doing this is that the <code>find_element</code> method doesn't take a tuple, but a tuple is what we have, so we have to do something to convert/unpack it into a list of arguments.
 
+As we look back at our test code, however, I notice that there's more functionality for this view that we haven't coded up as an action yet. It's the functionality where we're retrieving the text from the saved message element. What is the user action that this corresponds to? Well, reading the saved message of course! User actions don't always have to involve making something happen with taps or keystrokes. They can also involve simply getting information from the view. In this case, I'd call this user action something like <code>read_message</code>. So let's go ahead and fill it out by moving over the line from the testcase, and of course we no longer want to assign the text value, but we want to return it to whomever's calling this action method:
+
+        def read_message(self):
+            return driver.find_element(MobileBy.ACCESSIBILITY_ID, 'savedMessage').text
+
+Now we have two updates to make. First, we need to refer to driver as <code>self.driver</code>, and then we also need to move our locator up top. I'll call it <code>MESSAGE_LABEL</code>:
+
+        MESSAGE_LABEL = (MobileBy.ACCESSIBILITY_ID, 'savedMessage')
+
+Now, we can use it below in the action:
+
+        def read_message(self):
+            return self.driver.find_element(*self.MESSAGE_LABEL).text
+
+So again, this is an action modeling the user behavior of reading what's in the message label from before, and we implement it by simply returning the text of the appropriate element. We have one more action to implement. As we look over our test case, there's one more action we're taking on the echo view, and that is using it to go *back* to the home view. We implement this with <code>driver.back()</code>, but that's really just an implementation detail. The user behavior is simply the desire to go back. This could ultimately be implemented in many different ways, from tapping on a button, to swiping right on the screen, to hitting a hardware back button, or whatever. So even though it's just one line, we definitely want to encapsulate it into the model. I'll do this by simply creating an action method named <code>nav_back()</code>, and moving over the <code>driver.back()</code> command from the test case. Apart from renaming <code>driver</code> to <code>self.driver</code>, there's nothing more we need to do to complete this method!
+
+        def nav_back(self):
+            self.driver.back()
+
+I think our page object is done, so let's go back to our [test case](https://github.com/lana-20/appium-pom-practice-1/blob/main/pom/test_echo_box.py) and actually use it. I'm just going to delete all the code below the spot where we use the HomeView page object, so we can think how we want to register our test steps using the new EchoView object. And once we've deleted all this code, we can also delete the wait definition and the wait import, since we no longer need them. We also no longer need any of the expected condition or locator imports, so I'll delete them too. Now the first thing we need to do is import the page object class, up top:
+
+from views.echo_view import EchoView
+
+Now we can instantiate the EchoView using our driver object. We'll call it <code>echo</code> for now:
+
+        echo = EchoView(driver)
+
+And what is it we want to accomplish on this view? Well, we want to save a message! So we can call the <code>save_message</code> action method, with whatever string we want. Earlier we were using the string 'Hello', so we can keep using that:
+
+        echo.save_message('Hello')
+
+But we're going to use this string many places in this test, because we're going to want to make assertions that the saved text is equal to the expected text. So I'm going to backtrack and actually save this string in a variable so if we ever want to update this test with a new string, we just have one place to do it:
+
+        message = 'Hello'
+        echo.save_message(message)
+
+Now we can just use the local <code>message</code> variable anytime we want to refer to the string that we used here. So that takes care of saving the message. The next step is to verify that the saved message is correct, and then go back to the home view. So we can do that using the <code>read_message</code> and <code>nav_back</code> actions:
+
+        assert echo.read_message() == message
+        echo.nav_back()
+
+Here we're not just reading the message but we're making an assertion that it equals the string that we typed in. Now we're back on the home view, and our goal here is to go directly to the echo view once more, to ensure that our message was saved after navigating away. We already have a home view object instantiated, so we can just reuse it:
+
+        home.nav_to_echo_box()
+
+And here we are at the echo view. Our goal is merely to make the same assertion we did before, so we can just copy and paste that line:
+
+        assert echo.read_message() == message
+
+We're done, this test code looks amazing now. We can read it almost as though we had described the steps in English. Navigate to the echo box view, then save a message, then read that message and assert it is correct, and so on. But before we get too happy, let's actually run it and make sure it works:
+
+    pytest test_echo_box.py
+
+The app will load momentarily, walk through the various steps and complete them. Checking the terminal output, we can see that Pytest says 1 test passed. Now we can make more improvements knowing that things work in the current state. But we've got to a good stopping point for now.
 
 
 
