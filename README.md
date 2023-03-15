@@ -6,7 +6,7 @@ Let's continue our work with the Page Object Model by moving into some practical
 
     cp -R suite pom
 
-When I use <code>cp -R</code> on Mac or Linux, it allows me to recursively copy a directory. Of course, you don't need to use the terminal to duplicate this directory; you could use Finder on Mac or the Explorer on Windows. Alright, now I have my [<code>pom</code>](https://github.com/lana-20/appium-pom-practice-1/tree/main/pom) directory, so I'll open it up in the editor, and head over to the [<code>test_echo_box.py</code>](https://github.com/lana-20/appium-pom-practice-1/blob/main/pom/test_echo_box.py) file. Our job is going to be to turn this file into a respectable test file by creating page objects for the views represented here. Let's work on it step by step. What's the view that we are on as we start the test? It's the home view of the app. So let's create a file to represent this view. And I like to keep my page objects organized, so I'm going to create a directory for them all to live in. If I were working with a web app, I'd call this directory <code>pages</code>. Since we're working with a mobile app, I'm going to call it <code>views</code>. Now that I have the [<code>views</code>](https://github.com/lana-20/appium-pom-practice-1/tree/main/pom/views) directory created, I'm going to create a new file called <code>home_view.py</code>. In it I can stub out a page object for this view:
+When I use <code>cp -R</code> on Mac or Linux, it allows me to recursively copy a directory. Of course, you don't need to use the terminal to duplicate this directory; you could use Finder on Mac or the Explorer on Windows. Alright, now I have my [<code>pom</code>](https://github.com/lana-20/appium-pom-practice-1/tree/main/pom) directory, so I'll open it up in the editor, and head over to the [<code>test_echo_box.py</code>](https://github.com/lana-20/appium-pom-practice-1/blob/main/pom/test_echo_box.py) file. Our job is going to be to turn this file into a respectable test file by creating page objects for the views represented here. Let's work on it step by step. What's the view that we are on as we start the test? It's the home view of the app. So let's create a file to represent this view. And I like to keep my page objects organized, so I'm going to create a directory for them all to live in. If I were working with a web app, I'd call this directory <code>pages</code>. Since we're working with a mobile app, I'm going to call it <code>views</code>. Now that I have the [<code>views</code>](https://github.com/lana-20/appium-pom-practice-1/tree/main/pom/views) directory created, I'm going to create a new file called [<code>home_view.py</code>](https://github.com/lana-20/appium-pom-practice-1/blob/main/pom/views/home_view.py). In it I can stub out a page object for this view:
 
     class HomeView(object):
         pass
@@ -34,6 +34,42 @@ This is great, but now we are missing some imports. Our page object file here do
     from appium.webdriver.common.mobileby import MobileBy
     from selenium.webdriver.support.wait import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
+
+And we still have one more problem. We're referencing a <code>driver</code> object in constructing our webdriverwait, but we don't have a driver object here. We could pass it in as an argument to this function, but we're going to be using the driver object all throughout each page object we use, so there's a better way: we can pass in the driver object when we construct a page object. To do that, we need to make a constructor function for the class, also known as an initialization method:
+
+        def __init__(self, driver):
+                self.driver = driver
+
+In this <code>__init__</code> method, we want to accept a driver object, and then store it locally for reference by other methods. Now that we know we have a driver object as <code>self.driver</code> within any method of this class, we can update our <code>nav_to_echo_box</code> method to use it:
+
+        def nav_to_echo_box(self):
+                wait = WebDriverWait(self.driver, 10)
+                wait.until(EC.presence_of_element_located(
+                    (MobileBy.ACCESSIBILITY_ID, 'Echo Box'))).click()
+
+This looks totally functional now, but there's another practice I recommend following that we'll explore now, which is to keep all the locators at the top of the file or the class, out of the test logic itself. Notice how we define the Echo Box locator using a strategy and a selector tuple. We can just give that tuple a name, and put it up at the top of the class:
+
+    class HomeView(object):
+        ECHO_ITEM = (MobileBy.ACCESSIBILITY_ID, 'Echo Box')
+
+Notice I'm putting it outside of any functions, and I'm making it all caps to show that it's a constant. Now we can update our action method once more to use this constant rather than locating it in the action method itself:
+
+        def nav_to_echo_box(self):
+            wait = WebDriverWait(self.driver, 10)
+            wait.until(EC.presence_of_element_located(self.ECHO_ITEM)).click()
+
+Again, we're doing this both for clean organization and to eliminate any duplication, in case multiple action methods need to make use of the same elements. There's one more step before this is ready, and that is to actually use it! We need to now go back to our [testcase](https://github.com/lana-20/appium-pom-practice-1/blob/main/pom/test_echo_box.py) and use our brand new page object instead of what we had before. So the first thing I need to do of course is to import the page object class up top:
+
+    from views.home_view import HomeView
+
+Here I'm using a Python import that basically says, find the home_view file inside the views directory relative to wherever I'm running Python from, and import the HomeView name from there. Now that we have the name imported, we can use it:
+
+        home = HomeView(driver)
+        home.nav_to_echo_box()
+
+Our very first use of our very first page object! This is pretty fun. Our overall test code doesn't look a whole lot prettier yet, but that's because we haven't converted the Echo Box view into an object yet. But before we do that, let's first run this test and make sure it works. It's always good to run things at each stage of a refactor so you don't make too many changes that would be hard to parse apart if something goes wrong. So I can head over to my terminal, navigate into the pom directory, and run the test. This time I'm going to explicitly refer to the test file with the Pytest command, even though it's the only one, so you can see how we would run just one specific test file if we need to:
+
+    pytest test_echo_box.py
 
 
 
